@@ -26,8 +26,8 @@ Installation
 ------------
 Run:
 
-    $ go get github.com/vtolstov/packer-post-processor-shell
-    $ go install github.com/vtolstov/packer-post-processor-shell
+    $ go get github.com/kadaan/packer-post-processor-shell
+    $ go install github.com/kadaan/packer-post-processor-shell
 
 Add the post-processor to ~/.packerconfig:
 
@@ -36,4 +36,3 @@ Add the post-processor to ~/.packerconfig:
         "shell": "packer-post-processor-shell"
       }
     }
-
