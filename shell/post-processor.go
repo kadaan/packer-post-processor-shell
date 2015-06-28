@@ -39,6 +39,8 @@ type Config struct {
 
 	TargetPath string `mapstructure:"target"`
 
+	KeepInputArtifact bool   `mapstructure:"keep_input_artifact"`
+
 	ctx interpolate.Context
 }
 
@@ -154,13 +156,14 @@ func (p *ShellPostProcessor) Configure(raws ...interface{}) error {
 }
 
 func (p *ShellPostProcessor) PostProcess(ui packer.Ui, artifact packer.Artifact) (packer.Artifact, bool, error) {
+	keep := p.config.KeepInputArtifact
 	scripts := make([]string, len(p.config.Scripts))
 	copy(scripts, p.config.Scripts)
 
 	if p.config.Inline != nil {
 		tf, err := ioutil.TempFile("", "packer-shell")
 		if err != nil {
-			return nil, false, fmt.Errorf("Error preparing shell script: %s", err)
+			return nil, keep, fmt.Errorf("Error preparing shell script: %s", err)
 		}
 		defer os.Remove(tf.Name())
 
@@ -172,12 +175,12 @@ func (p *ShellPostProcessor) PostProcess(ui packer.Ui, artifact packer.Artifact)
 		writer.WriteString(fmt.Sprintf("#!%s\n", p.config.InlineShebang))
 		for _, command := range p.config.Inline {
 			if _, err := writer.WriteString(command + "\n"); err != nil {
-				return nil, false, fmt.Errorf("Error preparing shell script: %s", err)
+				return nil, keep, fmt.Errorf("Error preparing shell script: %s", err)
 			}
 		}
 
 		if err := writer.Flush(); err != nil {
-			return nil, false, fmt.Errorf("Error preparing shell script: %s", err)
+			return nil, keep, fmt.Errorf("Error preparing shell script: %s", err)
 		}
 
 		tf.Close()
@@ -201,7 +204,7 @@ func (p *ShellPostProcessor) PostProcess(ui packer.Ui, artifact packer.Artifact)
 			log.Printf("Opening %s for reading", path)
 			f, err := os.Open(path)
 			if err != nil {
-				return nil, false, fmt.Errorf("Error opening shell script: %s", err)
+				return nil, keep, fmt.Errorf("Error opening shell script: %s", err)
 			}
 			defer f.Close()
 
@@ -214,9 +217,9 @@ func (p *ShellPostProcessor) PostProcess(ui packer.Ui, artifact packer.Artifact)
 			err = cmd.Run()
 			ui.Message(fmt.Sprintf("%s", stdout.String()))
 			if err != nil {
-				return nil, false, fmt.Errorf("Unable to execute script: %s", stderr.String())
+				return nil, keep, fmt.Errorf("Unable to execute script: %s", stderr.String())
 			}
 		}
 	}
-	return artifact, false, nil
+	return NewArtifact(name, artifact.BuilderId(), outputPath), keep, nil
 }
